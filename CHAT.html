@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Của Tôi</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark-reasonable.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <style>
+        /* Cấu hình màu sắc giao diện Dark Mode */
+        :root {
+            --bg-app: #131314;
+            --bg-panel: #1e1f20;
+            --text-main: #e3e3e3;
+            --accent-color: #4b90ff;
+            --user-msg-bg: #2b2c2f;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* THANH HEADER */
+        .header {
+            padding: 15px 20px;
+            background: rgba(30, 31, 32, 0.8);
+            backdrop-filter: blur(10px); /* Hiệu ứng kính mờ */
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            font-size: 12px;
+            background: #333;
+            padding: 4px 10px;
+            border-radius: 12px;
+            color: #888;
+            border: 1px solid #444;
+        }
+
+            .status-badge.active {
+                color: #4caf50;
+                border-color: #4caf50;
+            }
+
+        /* KHUNG CHAT */
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            gap: 15px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .bot .avatar {
+            background: linear-gradient(135deg, #4b90ff, #ff5546);
+            color: white;
+        }
+
+        .user .avatar {
+            display: none;
+        }
+        /* Ẩn avatar user cho gọn */
+
+        .content {
+            line-height: 1.6;
+            flex: 1;
+            font-size: 16px;
+        }
+
+        /* Style cho tin nhắn User */
+        .user {
+            justify-content: flex-end;
+        }
+
+            .user .content {
+                background-color: var(--user-msg-bg);
+                padding: 10px 18px;
+                border-radius: 18px;
+                border-bottom-right-radius: 4px;
+                max-width: 80%;
+                flex: unset; /* Để bong bóng chat co giãn theo nội dung */
+            }
+
+        /* Style cho tin nhắn Bot */
+        .bot .content {
+            padding-top: 5px;
+        }
+
+        /* Style cho Code Block */
+        pre {
+            background: #1e1e1e !important;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border: 1px solid #333;
+        }
+
+        code {
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+        }
+
+        /* KHUNG NHẬP LIỆU */
+        .input-area {
+            background: var(--bg-app);
+            padding: 20px;
+        }
+
+        .input-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--bg-panel);
+            border-radius: 25px;
+            border: 1px solid #444;
+            display: flex;
+            align-items: flex-end; /* Căn nút xuống dưới cùng nếu textarea cao lên */
+            padding: 10px;
+            transition: border-color 0.2s;
+        }
+
+            .input-wrapper:focus-within {
+                border-color: var(--accent-color);
+            }
+
+        textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 8px 10px;
+            font-size: 16px;
+            outline: none;
+            resize: none; /* Tắt kéo giãn thủ công */
+            max-height: 200px; /* Chiều cao tối đa */
+            font-family: inherit;
+            overflow-y: auto;
+        }
+
+        button#send-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2px;
+            transition: 0.2s;
+        }
+
+            button#send-btn:hover {
+                opacity: 0.9;
+            }
+
+            button#send-btn:disabled {
+                background: #444;
+                cursor: not-allowed;
+            }
+
+        button svg {
+            fill: white;
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Hiệu ứng Loading 3 chấm */
+        .typing span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: #aaa;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: blink 1.4s infinite both;
+        }
+
+            .typing span:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+
+            .typing span:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+
+        @keyframes blink {
+            0%, 100% {
+                opacity: 0.2;
+                transform: scale(0.8);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="brand">✨ Quốc Cường AI </div>
+        <div id="model-status" class="status-badge">Đang quét Model...</div>
+    </div>
+
+    <div id="chat-container">
+        <div class="message bot">
+            <div class="avatar">AI</div>
+            <div class="content">Chào bạn! Tôi là Quốc Cường AI sẽ giải đáp mọi thắc mắc của bạn.</div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <div class="input-wrapper">
+            <textarea id="user-input" rows="1" placeholder="Nhập tin nhắn... (Shift+Enter để xuống dòng)"></textarea>
+            <button id="send-btn">
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+            </button>
+        </div>
+        <div style="text-align: center; color: #666; font-size: 12px; margin-top: 10px;">
+            Gemini có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // DÁN API KEY CỦA BẠN VÀO ĐÂY
+        const API_KEY = "AIzaSyArY7ahfhxfRJ33BHaFTf8RHxSWY74TaRs";
+        // ==========================================
+
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const statusBadge = document.getElementById('model-status');
+
+        let activeModel = null; // Biến lưu model đã tìm được
+
+        // Cấu hình Markdown & Highlight
+        marked.setOptions({
+            highlight: function (code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            },
+            langPrefix: 'hljs language-'
+        });
+
+        // Tự động giãn dòng khi gõ (Auto-resize Textarea)
+        userInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if (this.value === '') this.style.height = 'auto';
+        });
+
+        // Xử lý phím Enter (Gửi) và Shift+Enter (Xuống dòng)
+        userInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Chặn xuống dòng mặc định
+                handleChat();
+            }
+        });
+
+        sendBtn.addEventListener('click', handleChat);
+
+        async function handleChat() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // 1. Reset ô nhập liệu
+            userInput.value = '';
+            userInput.style.height = 'auto'; // Reset chiều cao
+
+            // 2. Hiện tin nhắn User
+            addMessage(text, 'user');
+
+            // 3. Hiện Loading
+            const loadingId = 'loading-' + Date.now();
+            addLoading(loadingId);
+            sendBtn.disabled = true;
+
+            try {
+                // Bước 1: Nếu chưa biết dùng model nào, đi tìm trước
+                if (!activeModel) {
+                    activeModel = await findBestModel();
+                    statusBadge.innerText = `Đang dùng: ${activeModel}`;
+                    statusBadge.classList.add('active');
+                }
+
+                // Bước 2: Gọi API
+                const reply = await callGeminiAPI(text, activeModel);
+
+                // Xóa loading và hiện kết quả
+                document.getElementById(loadingId).remove();
+                addMessage(reply, 'bot');
+
+            } catch (err) {
+                document.getElementById(loadingId).remove();
+                addMessage(`❌ Lỗi: ${err.message}`, 'bot');
+                activeModel = null; // Reset để thử lại lần sau
+                statusBadge.innerText = "Mất kết nối";
+                statusBadge.classList.remove('active');
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+
+        // HÀM TÌM MODEL (GIỮ NGUYÊN TỪ PHIÊN BẢN TRƯỚC VÌ NÓ CHẠY TỐT)
+        async function findBestModel() {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`);
+            const data = await res.json();
+            if (data.error) throw new Error(data.error.message);
+
+            const chatModels = data.models.filter(m => m.supportedGenerationMethods.includes("generateContent"));
+            if (chatModels.length === 0) throw new Error("Không có Model nào khả dụng!");
+
+            // Ưu tiên Flash -> Pro -> Cái đầu tiên tìm thấy
+            let best = chatModels.find(m => m.name.includes('flash')) ||
+                chatModels.find(m => m.name.includes('pro')) ||
+                chatModels[0];
+
+            return best.name.replace("models/", "");
+        }
+
+        // HÀM GỌI API
+        async function callGeminiAPI(prompt, model) {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error.message);
+            return data.candidates[0].content.parts[0].text;
+        }
+
+        // HÀM HIỂN THỊ TIN NHẮN
+        function addMessage(content, role) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+
+            const avatar = role === 'bot' ? `<div class="avatar">AI</div>` : '';
+
+            // Nếu là bot, parse Markdown. Nếu là user, escape HTML để tránh lỗi
+            let htmlContent = '';
+            if (role === 'bot') {
+                htmlContent = marked.parse(content);
+            } else {
+                // Chuyển ký tự đặc biệt thành text thường để tránh lỗi HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerText = content;
+                htmlContent = tempDiv.innerHTML.replace(/\n/g, '<br>');
+            }
+
+            div.innerHTML = `${avatar}<div class="content">${htmlContent}</div>`;
+            chatContainer.appendChild(div);
+
+            // Scroll xuống dưới cùng
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Highlight code nếu có
+            if (role === 'bot') hljs.highlightAll();
+        }
+
+        function addLoading(id) {
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'message bot';
+            div.innerHTML = `
+                    <div class="avatar">AI</div>
+                    <div class="content">
+                        <div class="typing"><span></span><span></span><span></span></div>
+                    </div>`;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>

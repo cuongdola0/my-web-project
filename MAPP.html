@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bản Đồ Khu Vực</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        /* 1. Trang trí nền phía sau */
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f2f5; /* Màu nền xám nhẹ cho web */
+            height: 100vh; /* Chiều cao bằng màn hình */
+            display: flex;
+            justify-content: center; /* Căn giữa ngang */
+            align-items: center; /* Căn giữa dọc */
+            flex-direction: column;
+        }
+
+        /* 2. Cái khung chứa bản đồ (Nằm giữa) */
+        .map-frame {
+            position: relative; /* Để thanh tìm kiếm trôi theo khung này */
+            width: 80%;       /* Rộng 80% màn hình */
+            max-width: 1000px; /* Không rộng quá 1000px */
+            height: 600px;    /* Chiều cao cố định */
+            background: white;
+            border-radius: 20px; /* Bo tròn góc */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); /* Đổ bóng cho nổi */
+            overflow: hidden; /* Để bản đồ không lòi ra ngoài góc bo */
+            border: 5px solid white; /* Viền trắng bao quanh */
+        }
+
+        /* Bản đồ sẽ lấp đầy cái khung trên */
+        #map { height: 100%; width: 100%; }
+
+        /* Thanh tìm kiếm (chỉnh lại để nằm trong khung) */
+        .search-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9); /* Nền hơi trong suốt */
+            padding: 8px 15px;
+            border-radius: 30px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            width: 300px;
+            backdrop-filter: blur(5px);
+        }
+
+        input {
+            border: none;
+            outline: none;
+            flex: 1;
+            padding: 5px;
+            font-size: 15px;
+            background: transparent;
+        }
+
+        button {
+            background: #4b90ff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { opacity: 0.9; }
+        
+        h2 { margin-bottom: 20px; color: #333; }
+    </style>
+</head>
+<body>
+
+    <h2>📍 Bản Đồ Của Tôi</h2>
+
+    <div class="map-frame">
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Tìm địa điểm..." onkeypress="if(event.key==='Enter') searchLocation()">
+            <button onclick="searchLocation()">Tìm</button>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // --- GIỮ NGUYÊN CODE LOGIC CŨ ---
+        
+        // 1. Tọa độ mặc định (Đà Nẵng)
+        const defaultLocation = [16.0544, 108.2022];
+        
+        var map = L.map('map').setView(defaultLocation, 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var currentMarker = null;
+
+        function addMarker(lat, lng, title) {
+            if (currentMarker) map.removeLayer(currentMarker);
+            currentMarker = L.marker([lat, lng]).addTo(map)
+                .bindPopup(`<b>${title}</b><br>${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+                .openPopup();
+        }
+
+        addMarker(defaultLocation[0], defaultLocation[1], "Vị trí của tôi");
+
+        // Hàm tìm kiếm
+        async function searchLocation() {
+            const query = document.getElementById('search-input').value;
+            if (!query) return;
+
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data && data.length > 0) {
+                    const place = data[0];
+                    const lat = parseFloat(place.lat);
+                    const lon = parseFloat(place.lon);
+
+                    map.flyTo([lat, lon], 14, { duration: 1.5 });
+                    addMarker(lat, lon, place.display_name);
+                } else {
+                    alert("Không tìm thấy!");
+                }
+            } catch (error) {
+                console.error("Lỗi:", error);
+            }
+        }
+
+        map.on('click', function(e) {
+            addMarker(e.latlng.lat, e.latlng.lng, "Vị trí đã chọn");
+            map.panTo(e.latlng);
+        });
+
+    </script>
+
+</body>
+</html>
